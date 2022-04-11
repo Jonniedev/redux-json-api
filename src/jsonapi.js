@@ -66,7 +66,7 @@ export const createResource = (resource) => {
     };
 
     return new Promise((resolve, reject) => {
-      apiRequest(resource.type, options).then((json) => {
+      apiRequest(resource.type.replace('--', '/'), options).then((json) => {
         dispatch(apiCreated(json));
         resolve(json);
       }).catch((error) => {
@@ -103,7 +103,7 @@ export const readEndpoint = (endpoint, {
   return (dispatch, getState) => {
     let finalEndpoint = endpoint;
     if (typeof endpoint === 'object' && 'type' in endpoint) {
-      finalEndpoint = `${endpoint.type}/${endpoint.id}`;
+      finalEndpoint = `${endpoint.type.replace('--', '/')}/${endpoint.id}`;
     }
 
     dispatch(apiWillRead(finalEndpoint));
@@ -136,7 +136,7 @@ export const updateResource = (resource) => {
     dispatch(apiWillUpdate(resource));
 
     const { axiosConfig } = getState().api.endpoint;
-    const endpoint = `${resource.type}/${resource.id}`;
+    const endpoint = `${resource.type.replace('--', '/')}/${resource.id}`;
 
     const options = {
       ...axiosConfig,
@@ -168,7 +168,7 @@ export const deleteResource = (resource) => {
     dispatch(apiWillDelete(resource));
 
     const { axiosConfig } = getState().api.endpoint;
-    const endpoint = `${resource.type}/${resource.id}`;
+    const endpoint = `${resource.type.replace('--', '/')}/${resource.id}`;
 
     const options = {
       ...axiosConfig,
@@ -216,13 +216,17 @@ export const readRelated = (resource, relationship, queryString = '') => {
     if (hasOwnProperties(resource, ['relationships', relationship, 'links', 'related'])) {
       endpoint = resource.relationships[relationship].links.related;
 
+      if (hasOwnProperties(resource.relationships[relationship].links.related, ['href'])) {
+        endpoint = resource.relationships[relationship].links.related.href;
+      }
+
       if (axiosConfig.baseURL && endpoint.indexOf(axiosConfig.baseURL) === 0) {
         endpoint = endpoint.replace(axiosConfig.baseURL, '');
       }
     }
 
     if (!endpoint) {
-      endpoint = `${resource.type}/${resource.id}/${relationship}`;
+      endpoint = `${resource.type.replace('--', '/')}/${resource.id}/${relationship}`;
     }
 
     return dispatch(readEndpoint(`${endpoint}${queryString}`));
@@ -233,6 +237,10 @@ const getRelationshipEndpoint = (resource, relationship, axiosConfig) => {
   if (hasOwnProperties(resource, ['relationships', relationship, 'links', 'self'])) {
     let endpoint = resource.relationships[relationship].links.self;
 
+    if (hasOwnProperties(resource.relationships[relationship].links.self, ['href'])) {
+      endpoint = resource.relationships[relationship].links.self.href;
+    }
+
     if (axiosConfig.baseURL && endpoint.indexOf(axiosConfig.baseURL) === 0) {
       endpoint = endpoint.replace(axiosConfig.baseURL, '');
     }
@@ -240,7 +248,7 @@ const getRelationshipEndpoint = (resource, relationship, axiosConfig) => {
     return endpoint;
   }
 
-  return `${resource.type}/${resource.id}/relationships/${relationship}`;
+  return `${resource.type.replace('--', '/')}/${resource.id}/relationships/${relationship}`;
 };
 
 export const readRelationship = (resource, relationship, queryString = '') => {
